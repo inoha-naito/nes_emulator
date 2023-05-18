@@ -25,6 +25,11 @@ impl CPU {
         self.update_zero_and_negative_flags(self.register_x);
     }
 
+    fn inx(&mut self) {
+        self.register_x = self.register_x.wrapping_add(1);
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+
     fn update_zero_and_negative_flags(&mut self, result: u8) {
         if result == 0 {
             self.status = self.status | 0b0000_0010;
@@ -53,6 +58,7 @@ impl CPU {
                     self.lda(param);
                 }
                 0xAA => self.tax(),
+                0xE8 => self.inx(),
                 0x00 => return,
                 _ => todo!(""),
             }
@@ -93,5 +99,20 @@ mod test {
         cpu.register_a = 10;
         cpu.interpret(vec![0xaa, 0x00]);
         assert_eq!(cpu.register_x, 10);
+    }
+
+    #[test]
+    fn test_5_ops_working_together() {
+        let mut cpu = CPU::new();
+        cpu.interpret(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
+        assert_eq!(cpu.register_x, 0xc1);
+    }
+
+    #[test]
+    fn test_inx_overflow() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0xff;
+        cpu.interpret(vec![0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.register_x, 1);
     }
 }
