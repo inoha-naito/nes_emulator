@@ -7,9 +7,10 @@ pub struct CPU {
     memory: [u8; 0xffff],
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 #[allow(non_camel_case_types)]
 pub enum AddressingMode {
+    Accumulator,
     Immediate,
     ZeroPage,
     ZeroPage_X,
@@ -63,6 +64,10 @@ impl CPU {
 
     fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
         match mode {
+            AddressingMode::Accumulator => {
+                panic!("AddressingMode::Accumulator");
+            }
+
             AddressingMode::Immediate => self.program_counter,
 
             AddressingMode::ZeroPage => self.mem_read(self.program_counter) as u16,
@@ -159,6 +164,28 @@ impl CPU {
         self.set_register_a(self.register_a & value);
     }
 
+    fn asl(&mut self, mode: &AddressingMode) {
+        let (result, carry_flag) = if mode == &AddressingMode::Accumulator {
+            let (result, carry_flag) = self.register_a.overflowing_mul(2);
+            self.register_a = result;
+            (result, carry_flag)
+        } else {
+            let addr = self.get_operand_address(mode);
+            let value = self.mem_read(addr);
+            let (result, carry_flag) = value.overflowing_mul(2);
+            self.mem_write(addr, result);
+            (result, carry_flag)
+        };
+
+        if carry_flag {
+            self.status |= 0b00000001
+        } else {
+            self.status &= !0b00000001
+        };
+
+        self.update_zero_and_negative_flags(result);
+    }
+
     fn eor(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
@@ -234,6 +261,15 @@ impl CPU {
                 /* AND */
                 0x29 => {
                     self.and(&AddressingMode::Immediate);
+                    self.program_counter += 1;
+                }
+
+                /* ASL */
+                0x0A => {
+                    self.asl(&AddressingMode::Accumulator);
+                }
+                0x06 => {
+                    self.asl(&AddressingMode::ZeroPage);
                     self.program_counter += 1;
                 }
 
