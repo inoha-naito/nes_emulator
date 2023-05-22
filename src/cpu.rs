@@ -153,6 +153,18 @@ impl CPU {
         self.add_to_register_a(value);
     }
 
+    fn and(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        self.set_register_a(self.register_a & value);
+    }
+
+    fn eor(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        self.set_register_a(self.register_a ^ value);
+    }
+
     fn inx(&mut self) {
         self.register_x = self.register_x.wrapping_add(1);
         self.update_zero_and_negative_flags(self.register_x);
@@ -163,6 +175,12 @@ impl CPU {
         let value = self.mem_read(addr);
         self.register_a = value;
         self.update_zero_and_negative_flags(self.register_a);
+    }
+
+    fn ora(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        self.set_register_a(self.register_a | value);
     }
 
     fn sbc(&mut self, mode: &AddressingMode) {
@@ -213,8 +231,20 @@ impl CPU {
                     self.program_counter += 1;
                 }
 
+                /* AND */
+                0x29 => {
+                    self.and(&AddressingMode::Immediate);
+                    self.program_counter += 1;
+                }
+
                 /* BRK */
                 0x00 => return,
+
+                /* EOR */
+                0x49 => {
+                    self.eor(&AddressingMode::Immediate);
+                    self.program_counter += 1;
+                }
 
                 /* INX */
                 0xE8 => self.inx(),
@@ -250,6 +280,12 @@ impl CPU {
                 }
                 0xB1 => {
                     self.lda(&AddressingMode::Indirect_Y);
+                    self.program_counter += 1;
+                }
+
+                /* ORA */
+                0x09 => {
+                    self.ora(&AddressingMode::Immediate);
                     self.program_counter += 1;
                 }
 
@@ -301,6 +337,30 @@ impl CPU {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    /* AND */
+    #[test]
+    fn test_and() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x29, 0x0C, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0x0A;
+        cpu.run();
+        assert_eq!(cpu.register_a, 0x08);
+        assert_eq!(cpu.status, 0);
+    }
+
+    /* EOR */
+    #[test]
+    fn test_eor() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x49, 0x0C, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0x0A;
+        cpu.run();
+        assert_eq!(cpu.register_a, 0x06);
+        assert_eq!(cpu.status, 0);
+    }
 
     /* INX */
     #[test]
@@ -411,6 +471,18 @@ mod test {
         cpu.register_y = 0x10;
         cpu.run();
         assert_eq!(cpu.register_a, 0x5b);
+    }
+
+    /* ORA */
+    #[test]
+    fn test_ora() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x09, 0x0C, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0x0A;
+        cpu.run();
+        assert_eq!(cpu.register_a, 0x0E);
+        assert_eq!(cpu.status, 0);
     }
 
     /* STA */
