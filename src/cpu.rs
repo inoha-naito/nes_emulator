@@ -121,6 +121,38 @@ impl CPU {
         }
     }
 
+    fn set_register_a(&mut self, value: u8) {
+        self.register_a = value;
+        self.update_zero_and_negative_flags(self.register_a);
+    }
+
+    fn add_to_register_a(&mut self, value: u8) {
+        let carry = self.status & 0b00000001;
+        let (result, carry_flag) = self.register_a.overflowing_add(value + carry);
+        let overflow_flag = (self.register_a & 0b10000000) == (value & 0b10000000)
+            && (value & 0b10000000) != (result & 0b10000000);
+
+        if carry_flag {
+            self.status |= 0b00000001
+        } else {
+            self.status &= !0b00000001
+        };
+
+        if overflow_flag {
+            self.status |= 0b01000000
+        } else {
+            self.status &= !0b01000000
+        };
+
+        self.set_register_a(result);
+    }
+
+    fn adc(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        self.add_to_register_a(value);
+    }
+
     fn inx(&mut self) {
         self.register_x = self.register_x.wrapping_add(1);
         self.update_zero_and_negative_flags(self.register_x);
@@ -131,6 +163,12 @@ impl CPU {
         let value = self.mem_read(addr);
         self.register_a = value;
         self.update_zero_and_negative_flags(self.register_a);
+    }
+
+    fn sbc(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        self.add_to_register_a(value.wrapping_neg().wrapping_sub(1));
     }
 
     fn sta(&mut self, mode: &AddressingMode) {
@@ -169,6 +207,12 @@ impl CPU {
             self.program_counter += 1;
 
             match opcode {
+                /* ADC */
+                0x69 => {
+                    self.adc(&AddressingMode::Immediate);
+                    self.program_counter += 1;
+                }
+
                 /* BRK */
                 0x00 => return,
 
@@ -206,6 +250,12 @@ impl CPU {
                 }
                 0xB1 => {
                     self.lda(&AddressingMode::Indirect_Y);
+                    self.program_counter += 1;
+                }
+
+                /* SBC */
+                0xE9 => {
+                    self.sbc(&AddressingMode::Immediate);
                     self.program_counter += 1;
                 }
 
