@@ -204,10 +204,58 @@ impl CPU {
         self.update_zero_and_negative_flags(self.register_a);
     }
 
+    fn lsr(&mut self, mode: &AddressingMode) {
+        let (result, carry_flag) = if mode == &AddressingMode::Accumulator {
+            let result = self.register_a / 2;
+            let carry_flag = self.register_a & 0b00000001 == 0b00000001;
+            self.register_a = result;
+            (result, carry_flag)
+        } else {
+            let addr = self.get_operand_address(mode);
+            let value = self.mem_read(addr);
+            let result = value / 2;
+            let carry_flag = value & 0b00000001 == 0b00000001;
+            self.mem_write(addr, result);
+            (result, carry_flag)
+        };
+
+        if carry_flag {
+            self.status |= 0b00000001
+        } else {
+            self.status &= !0b00000001
+        };
+
+        self.update_zero_and_negative_flags(result);
+    }
+
     fn ora(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
         self.set_register_a(self.register_a | value);
+    }
+
+    fn rol(&mut self, mode: &AddressingMode) {
+        let (result, carry_flag) = if mode == &AddressingMode::Accumulator {
+            let (result, carry_flag) = self.register_a.overflowing_mul(2);
+            let result = result | (self.status & 0b00000001);
+            self.register_a = result;
+            (result, carry_flag)
+        } else {
+            let addr = self.get_operand_address(mode);
+            let value = self.mem_read(addr);
+            let (result, carry_flag) = value.overflowing_mul(2);
+            let result = result | (self.status & 0b00000001);
+            self.mem_write(addr, result);
+            (result, carry_flag)
+        };
+
+        if carry_flag {
+            self.status |= 0b00000001
+        } else {
+            self.status &= !0b00000001
+        };
+
+        self.update_zero_and_negative_flags(result);
     }
 
     fn sbc(&mut self, mode: &AddressingMode) {
@@ -319,9 +367,27 @@ impl CPU {
                     self.program_counter += 1;
                 }
 
+                /* LSR */
+                0x4A => {
+                    self.lsr(&AddressingMode::Accumulator);
+                }
+                0x46 => {
+                    self.lsr(&AddressingMode::ZeroPage);
+                    self.program_counter += 1;
+                }
+
                 /* ORA */
                 0x09 => {
                     self.ora(&AddressingMode::Immediate);
+                    self.program_counter += 1;
+                }
+
+                /* ROL */
+                0x2A => {
+                    self.rol(&AddressingMode::Accumulator);
+                }
+                0x26 => {
+                    self.rol(&AddressingMode::ZeroPage);
                     self.program_counter += 1;
                 }
 
