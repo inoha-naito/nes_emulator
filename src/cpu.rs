@@ -235,8 +235,16 @@ impl CPU {
         }
     }
 
+    fn bmi(&mut self, _mode: &AddressingMode) {
+        self.branch(self.status & 0b10000000 == 0b10000000);
+    }
+
     fn bne(&mut self, _mode: &AddressingMode) {
         self.branch(self.status & 0b00000010 != 0b00000010);
+    }
+
+    fn bpl(&mut self, _mode: &AddressingMode) {
+        self.branch(self.status & 0b10000000 != 0b10000000);
     }
 
     fn eor(&mut self, mode: &AddressingMode) {
@@ -424,9 +432,21 @@ impl CPU {
                     self.program_counter += 1;
                 }
 
+                /* BMI */
+                0x30 => {
+                    self.bmi(&AddressingMode::Relative);
+                    self.program_counter += 1;
+                }
+
                 /* BNE */
                 0xD0 => {
                     self.bne(&AddressingMode::Relative);
+                    self.program_counter += 1;
+                }
+
+                /* BPL */
+                0x10 => {
+                    self.bpl(&AddressingMode::Relative);
                     self.program_counter += 1;
                 }
 
