@@ -211,6 +211,30 @@ impl CPU {
         self.branch(self.status & 0b00000010 == 0b00000010);
     }
 
+    fn bit(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        let result = self.register_a & value;
+
+        if result == 0 {
+            self.status |= 0b00000010;
+        } else {
+            self.status &= !0b00000010;
+        }
+
+        if value & 0b10000000 != 0 {
+            self.status |= 0b10000000;
+        } else {
+            self.status &= !0b10000000;
+        }
+
+        if value & 0b01000000 != 0 {
+            self.status |= 0b01000000;
+        } else {
+            self.status &= !0b01000000;
+        }
+    }
+
     fn bne(&mut self, _mode: &AddressingMode) {
         self.branch(self.status & 0b00000010 != 0b00000010);
     }
@@ -391,6 +415,12 @@ impl CPU {
                 /* BEQ */
                 0xF0 => {
                     self.beq(&AddressingMode::Relative);
+                    self.program_counter += 1;
+                }
+
+                /* BIT */
+                0x24 => {
+                    self.bit(&AddressingMode::ZeroPage);
                     self.program_counter += 1;
                 }
 
