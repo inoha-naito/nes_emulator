@@ -170,6 +170,21 @@ impl CPU {
         }
     }
 
+    fn compare(&mut self, mode: &AddressingMode, target: u8) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        let result = target.wrapping_sub(value);
+        let carry_flag = target >= value;
+
+        if carry_flag {
+            self.status |= 0b00000001
+        } else {
+            self.status &= !0b00000001
+        };
+
+        self.update_zero_and_negative_flags(result);
+    }
+
     fn adc(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
@@ -274,6 +289,18 @@ impl CPU {
 
     fn clv(&mut self, _mode: &AddressingMode) {
         self.status &= !0b01000000;
+    }
+
+    fn cmp(&mut self, mode: &AddressingMode) {
+        self.compare(mode, self.register_a);
+    }
+
+    fn cpx(&mut self, mode: &AddressingMode) {
+        self.compare(mode, self.register_x);
+    }
+
+    fn cpy(&mut self, mode: &AddressingMode) {
+        self.compare(mode, self.register_y);
     }
 
     fn eor(&mut self, mode: &AddressingMode) {
@@ -517,6 +544,24 @@ impl CPU {
 
                 /* CLV */
                 0xB8 => self.clv(&AddressingMode::Implied),
+
+                /* CMP */
+                0xC9 => {
+                    self.cmp(&AddressingMode::Immediate);
+                    self.program_counter += 1;
+                }
+
+                /* CPX */
+                0xE0 => {
+                    self.cpx(&AddressingMode::Immediate);
+                    self.program_counter += 1;
+                }
+
+                /* CPY */
+                0xC0 => {
+                    self.cpy(&AddressingMode::Immediate);
+                    self.program_counter += 1;
+                }
 
                 /* EOR */
                 0x49 => {
