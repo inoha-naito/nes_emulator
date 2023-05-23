@@ -10,6 +10,7 @@ pub struct CPU {
 #[derive(Debug, PartialEq)]
 #[allow(non_camel_case_types)]
 pub enum AddressingMode {
+    Implied,
     Accumulator,
     Immediate,
     ZeroPage,
@@ -65,6 +66,10 @@ impl CPU {
 
     fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
         match mode {
+            AddressingMode::Implied => {
+                panic!("AddressingMode::Implied");
+            }
+
             AddressingMode::Accumulator => {
                 panic!("AddressingMode::Accumulator");
             }
@@ -255,6 +260,22 @@ impl CPU {
         self.branch(self.status & 0b01000000 == 0b01000000);
     }
 
+    fn clc(&mut self, _mode: &AddressingMode) {
+        self.status &= !0b00000001;
+    }
+
+    fn cld(&mut self, _mode: &AddressingMode) {
+        self.status &= !0b00001000;
+    }
+
+    fn cli(&mut self, _mode: &AddressingMode) {
+        self.status &= !0b00000100;
+    }
+
+    fn clv(&mut self, _mode: &AddressingMode) {
+        self.status &= !0b01000000;
+    }
+
     fn eor(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
@@ -357,6 +378,18 @@ impl CPU {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
         self.add_to_register_a(value.wrapping_neg().wrapping_sub(1));
+    }
+
+    fn sec(&mut self, _mode: &AddressingMode) {
+        self.status |= 0b00000001;
+    }
+
+    fn sed(&mut self, _mode: &AddressingMode) {
+        self.status |= 0b00001000;
+    }
+
+    fn sei(&mut self, _mode: &AddressingMode) {
+        self.status |= 0b00000100;
     }
 
     fn sta(&mut self, mode: &AddressingMode) {
@@ -473,6 +506,18 @@ impl CPU {
                     self.program_counter += 1;
                 }
 
+                /* CLC */
+                0x18 => self.clc(&AddressingMode::Implied),
+
+                /* CLD */
+                0xD8 => self.cld(&AddressingMode::Implied),
+
+                /* CLI */
+                0x58 => self.cli(&AddressingMode::Implied),
+
+                /* CLV */
+                0xB8 => self.clv(&AddressingMode::Implied),
+
                 /* EOR */
                 0x49 => {
                     self.eor(&AddressingMode::Immediate);
@@ -554,6 +599,15 @@ impl CPU {
                     self.sbc(&AddressingMode::Immediate);
                     self.program_counter += 1;
                 }
+
+                /* SEC */
+                0x38 => self.sec(&AddressingMode::Implied),
+
+                /* SED */
+                0xF8 => self.sed(&AddressingMode::Implied),
+
+                /* SEI */
+                0x78 => self.sei(&AddressingMode::Implied),
 
                 /* STA */
                 0x85 => {
