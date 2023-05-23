@@ -15,6 +15,7 @@ pub enum AddressingMode {
     ZeroPage,
     ZeroPage_X,
     ZeroPage_Y,
+    Relative,
     Absolute,
     Absolute_X,
     Absolute_Y,
@@ -80,6 +81,11 @@ impl CPU {
             AddressingMode::ZeroPage_Y => {
                 let pos = self.mem_read(self.program_counter);
                 pos.wrapping_add(self.register_y) as u16
+            }
+
+            AddressingMode::Relative => {
+                let base = self.mem_read(self.program_counter) as i8;
+                (base as u16).wrapping_add(self.program_counter + 1)
             }
 
             AddressingMode::Absolute => self.mem_read_u16(self.program_counter),
@@ -152,6 +158,13 @@ impl CPU {
         self.set_register_a(result);
     }
 
+    fn branch(&mut self, condition: bool) {
+        if condition {
+            let addr = self.get_operand_address(&AddressingMode::Relative);
+            self.program_counter = addr;
+        }
+    }
+
     fn adc(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
@@ -184,6 +197,14 @@ impl CPU {
         };
 
         self.update_zero_and_negative_flags(result);
+    }
+
+    fn bcc(&mut self, _mode: &AddressingMode) {
+        self.branch(self.status & 0b00000001 != 0b00000001);
+    }
+
+    fn bcs(&mut self, _mode: &AddressingMode) {
+        self.branch(self.status & 0b00000001 == 0b00000001);
     }
 
     fn eor(&mut self, mode: &AddressingMode) {
@@ -344,6 +365,18 @@ impl CPU {
                 }
                 0x06 => {
                     self.asl(&AddressingMode::ZeroPage);
+                    self.program_counter += 1;
+                }
+
+                /* BCC */
+                0x90 => {
+                    self.bcc(&AddressingMode::Relative);
+                    self.program_counter += 1;
+                }
+
+                /* BCS */
+                0xB0 => {
+                    self.bcs(&AddressingMode::Relative);
                     self.program_counter += 1;
                 }
 
