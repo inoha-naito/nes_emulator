@@ -247,6 +247,14 @@ impl CPU {
         self.branch(self.status & 0b10000000 != 0b10000000);
     }
 
+    fn bvc(&mut self, _mode: &AddressingMode) {
+        self.branch(self.status & 0b01000000 != 0b01000000);
+    }
+
+    fn bvs(&mut self, _mode: &AddressingMode) {
+        self.branch(self.status & 0b01000000 == 0b01000000);
+    }
+
     fn eor(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
@@ -452,6 +460,18 @@ impl CPU {
 
                 /* BRK */
                 0x00 => return,
+
+                /* BVC */
+                0x50 => {
+                    self.bvc(&AddressingMode::Relative);
+                    self.program_counter += 1;
+                }
+
+                /* BVS */
+                0x70 => {
+                    self.bvs(&AddressingMode::Relative);
+                    self.program_counter += 1;
+                }
 
                 /* EOR */
                 0x49 => {
