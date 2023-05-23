@@ -258,6 +258,32 @@ impl CPU {
         self.update_zero_and_negative_flags(result);
     }
 
+    fn ror(&mut self, mode: &AddressingMode) {
+        let (result, carry_flag) = if mode == &AddressingMode::Accumulator {
+            let result = self.register_a / 2;
+            let result = result | (self.status & 0b00000001) << 7;
+            let carry_flag = self.register_a & 0b00000001 == 0b00000001;
+            self.register_a = result;
+            (result, carry_flag)
+        } else {
+            let addr = self.get_operand_address(mode);
+            let value = self.mem_read(addr);
+            let result = value / 2;
+            let result = result | (self.status & 0b00000001) << 7;
+            let carry_flag = value & 0b00000001 == 0b00000001;
+            self.mem_write(addr, result);
+            (result, carry_flag)
+        };
+
+        if carry_flag {
+            self.status |= 0b00000001
+        } else {
+            self.status &= !0b00000001
+        };
+
+        self.update_zero_and_negative_flags(result);
+    }
+
     fn sbc(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
@@ -388,6 +414,15 @@ impl CPU {
                 }
                 0x26 => {
                     self.rol(&AddressingMode::ZeroPage);
+                    self.program_counter += 1;
+                }
+
+                /* ROR */
+                0x6A => {
+                    self.ror(&AddressingMode::Accumulator);
+                }
+                0x66 => {
+                    self.ror(&AddressingMode::ZeroPage);
                     self.program_counter += 1;
                 }
 
