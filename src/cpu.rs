@@ -207,6 +207,14 @@ impl CPU {
         self.branch(self.status & 0b00000001 == 0b00000001);
     }
 
+    fn beq(&mut self, _mode: &AddressingMode) {
+        self.branch(self.status & 0b00000010 == 0b00000010);
+    }
+
+    fn bne(&mut self, _mode: &AddressingMode) {
+        self.branch(self.status & 0b00000010 != 0b00000010);
+    }
+
     fn eor(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
@@ -377,6 +385,18 @@ impl CPU {
                 /* BCS */
                 0xB0 => {
                     self.bcs(&AddressingMode::Relative);
+                    self.program_counter += 1;
+                }
+
+                /* BEQ */
+                0xF0 => {
+                    self.beq(&AddressingMode::Relative);
+                    self.program_counter += 1;
+                }
+
+                /* BNE */
+                0xD0 => {
+                    self.bne(&AddressingMode::Relative);
                     self.program_counter += 1;
                 }
 
