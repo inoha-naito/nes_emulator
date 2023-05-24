@@ -432,10 +432,23 @@ impl CPU {
         self.update_zero_and_negative_flags(result);
     }
 
+    fn nop(&mut self, _mode: &AddressingMode) {
+        // do nothing
+    }
+
     fn ora(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
         self.set_register_a(self.register_a | value);
+    }
+
+    fn pha(&mut self, _mode: &AddressingMode) {
+        self.stack_push(self.register_a);
+    }
+
+    fn pla(&mut self, _mode: &AddressingMode) {
+        let value = self.stack_pop();
+        self.set_register_a(value);
     }
 
     fn rol(&mut self, mode: &AddressingMode) {
@@ -758,10 +771,23 @@ impl CPU {
                     self.program_counter += 1;
                 }
 
+                /* NOP */
+                0xEA => self.nop(&AddressingMode::Implied),
+
                 /* ORA */
                 0x09 => {
                     self.ora(&AddressingMode::Immediate);
                     self.program_counter += 1;
+                }
+
+                /* PHA */
+                0x48 => {
+                    self.pha(&AddressingMode::Implied);
+                }
+
+                /* PLA */
+                0x68 => {
+                    self.pla(&AddressingMode::Implied);
                 }
 
                 /* ROL */
