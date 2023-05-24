@@ -20,6 +20,7 @@ pub enum AddressingMode {
     Absolute,
     Absolute_X,
     Absolute_Y,
+    Indirect,
     Indirect_X,
     Indirect_Y,
     NoneAddressing,
@@ -103,6 +104,11 @@ impl CPU {
             AddressingMode::Absolute_Y => {
                 let base = self.mem_read_u16(self.program_counter);
                 base.wrapping_add(self.register_y as u16)
+            }
+
+            AddressingMode::Indirect => {
+                let base = self.mem_read_u16(self.program_counter);
+                self.mem_read_u16(base)
             }
 
             AddressingMode::Indirect_X => {
@@ -343,6 +349,11 @@ impl CPU {
     fn iny(&mut self, _mode: &AddressingMode) {
         self.register_y = self.register_y.wrapping_add(1);
         self.update_zero_and_negative_flags(self.register_y);
+    }
+
+    fn jmp(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        self.program_counter = addr;
     }
 
     fn lda(&mut self, mode: &AddressingMode) {
@@ -627,6 +638,14 @@ impl CPU {
 
                 /* INY */
                 0xC8 => self.iny(&AddressingMode::Implied),
+
+                /* JMP */
+                0x4C => {
+                    self.jmp(&AddressingMode::Absolute);
+                }
+                0x6C => {
+                    self.jmp(&AddressingMode::Indirect);
+                }
 
                 /* LDA */
                 0xA9 => {
