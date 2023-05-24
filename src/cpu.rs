@@ -446,9 +446,18 @@ impl CPU {
         self.stack_push(self.register_a);
     }
 
+    fn php(&mut self, _mode: &AddressingMode) {
+        self.stack_push(self.status | 0b00010000 | 0b00100000);
+    }
+
     fn pla(&mut self, _mode: &AddressingMode) {
         let value = self.stack_pop();
         self.set_register_a(value);
+    }
+
+    fn plp(&mut self, _mode: &AddressingMode) {
+        let value = self.stack_pop();
+        self.status = value & !0b00010000 | 0b00100000;
     }
 
     fn rol(&mut self, mode: &AddressingMode) {
@@ -501,6 +510,12 @@ impl CPU {
         self.update_zero_and_negative_flags(result);
     }
 
+    fn rti(&mut self, _mode: &AddressingMode) {
+        let value = self.stack_pop();
+        self.status = value & !0b00010000 | 0b00100000;
+        self.program_counter = self.stack_pop_u16();
+    }
+
     fn rts(&mut self, _mode: &AddressingMode) {
         let addr = self.stack_pop_u16() + 1;
         self.program_counter = addr;
@@ -527,6 +542,16 @@ impl CPU {
     fn sta(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         self.mem_write(addr, self.register_a);
+    }
+
+    fn stx(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        self.mem_write(addr, self.register_x);
+    }
+
+    fn sty(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        self.mem_write(addr, self.register_y);
     }
 
     fn tax(&mut self) {
@@ -785,9 +810,19 @@ impl CPU {
                     self.pha(&AddressingMode::Implied);
                 }
 
+                /* PHP */
+                0x08 => {
+                    self.php(&AddressingMode::Implied);
+                }
+
                 /* PLA */
                 0x68 => {
                     self.pla(&AddressingMode::Implied);
+                }
+
+                /* PLP */
+                0x28 => {
+                    self.plp(&AddressingMode::Implied);
                 }
 
                 /* ROL */
@@ -806,6 +841,11 @@ impl CPU {
                 0x66 => {
                     self.ror(&AddressingMode::ZeroPage);
                     self.program_counter += 1;
+                }
+
+                /* RTI */
+                0x40 => {
+                    self.rti(&AddressingMode::Implied);
                 }
 
                 /* RTS */
@@ -855,6 +895,18 @@ impl CPU {
                 }
                 0x91 => {
                     self.sta(&AddressingMode::Indirect_Y);
+                    self.program_counter += 1;
+                }
+
+                /* STX */
+                0x86 => {
+                    self.stx(&AddressingMode::ZeroPage);
+                    self.program_counter += 1;
+                }
+
+                /* STY */
+                0x84 => {
+                    self.sty(&AddressingMode::ZeroPage);
                     self.program_counter += 1;
                 }
 
