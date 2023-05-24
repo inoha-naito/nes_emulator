@@ -4,6 +4,7 @@ pub struct CPU {
     pub register_y: u8,
     pub status: u8,
     pub program_counter: u16,
+    pub stack_pointer: u8,
     memory: [u8; 0xffff],
 }
 
@@ -34,6 +35,7 @@ impl Default for CPU {
             register_y: 0,
             status: 0,
             program_counter: 0,
+            stack_pointer: 0xFD,
             memory: [0; 0xffff],
         }
     }
@@ -63,6 +65,29 @@ impl CPU {
         let lo = (data & 0xff) as u8;
         self.mem_write(pos, lo);
         self.mem_write(pos + 1, hi);
+    }
+
+    fn stack_pop(&mut self) -> u8 {
+        self.stack_pointer = self.stack_pointer.wrapping_add(1);
+        self.mem_read(0x0100 + self.stack_pointer as u16)
+    }
+
+    fn stack_push(&mut self, data: u8) {
+        self.mem_write(0x0100 + self.stack_pointer as u16, data);
+        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+    }
+
+    fn stack_pop_u16(&mut self) -> u16 {
+        let lo = self.stack_pop() as u16;
+        let hi = self.stack_pop() as u16;
+        (hi << 8) | lo
+    }
+
+    fn stack_push_u16(&mut self, data: u16) {
+        let hi = (data >> 8) as u8;
+        let lo = (data & 0xff) as u8;
+        self.stack_push(hi);
+        self.stack_push(lo);
     }
 
     fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
@@ -356,6 +381,12 @@ impl CPU {
         self.program_counter = addr;
     }
 
+    fn jsr(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        self.stack_push_u16(self.program_counter + 2 - 1);
+        self.program_counter = addr;
+    }
+
     fn lda(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
@@ -441,6 +472,11 @@ impl CPU {
         };
 
         self.update_zero_and_negative_flags(result);
+    }
+
+    fn rts(&mut self, _mode: &AddressingMode) {
+        let addr = self.stack_pop_u16() + 1;
+        self.program_counter = addr;
     }
 
     fn sbc(&mut self, mode: &AddressingMode) {
@@ -647,6 +683,12 @@ impl CPU {
                     self.jmp(&AddressingMode::Indirect);
                 }
 
+                /* JSR */
+                0x20 => {
+                    self.jsr(&AddressingMode::Absolute);
+                    self.program_counter += 2;
+                }
+
                 /* LDA */
                 0xA9 => {
                     self.lda(&AddressingMode::Immediate);
@@ -712,6 +754,11 @@ impl CPU {
                 0x66 => {
                     self.ror(&AddressingMode::ZeroPage);
                     self.program_counter += 1;
+                }
+
+                /* RTS */
+                0x60 => {
+                    self.rts(&AddressingMode::Implied);
                 }
 
                 /* SBC */
