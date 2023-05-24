@@ -394,6 +394,20 @@ impl CPU {
         self.update_zero_and_negative_flags(self.register_a);
     }
 
+    fn ldx(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        self.register_x = value;
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn ldy(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        self.register_y = value;
+        self.update_zero_and_negative_flags(self.register_y);
+    }
+
     fn lsr(&mut self, mode: &AddressingMode) {
         let (result, carry_flag) = if mode == &AddressingMode::Accumulator {
             let result = self.register_a / 2;
@@ -720,6 +734,18 @@ impl CPU {
                 }
                 0xB1 => {
                     self.lda(&AddressingMode::Indirect_Y);
+                    self.program_counter += 1;
+                }
+
+                /* LDX */
+                0xA2 => {
+                    self.ldx(&AddressingMode::Immediate);
+                    self.program_counter += 1;
+                }
+
+                /* LDY */
+                0xA0 => {
+                    self.ldy(&AddressingMode::Immediate);
                     self.program_counter += 1;
                 }
 
