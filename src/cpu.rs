@@ -303,15 +303,46 @@ impl CPU {
         self.compare(mode, self.register_y);
     }
 
+    fn dec(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        let result = value.wrapping_sub(1);
+        self.mem_write(addr, result);
+        self.update_zero_and_negative_flags(result);
+    }
+
+    fn dex(&mut self, _mode: &AddressingMode) {
+        self.register_x = self.register_x.wrapping_sub(1);
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn dey(&mut self, _mode: &AddressingMode) {
+        self.register_y = self.register_y.wrapping_sub(1);
+        self.update_zero_and_negative_flags(self.register_y);
+    }
+
     fn eor(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
         self.set_register_a(self.register_a ^ value);
     }
 
-    fn inx(&mut self) {
+    fn inc(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        let result = value.wrapping_add(1);
+        self.mem_write(addr, result);
+        self.update_zero_and_negative_flags(result);
+    }
+
+    fn inx(&mut self, _mode: &AddressingMode) {
         self.register_x = self.register_x.wrapping_add(1);
         self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn iny(&mut self, _mode: &AddressingMode) {
+        self.register_y = self.register_y.wrapping_add(1);
+        self.update_zero_and_negative_flags(self.register_y);
     }
 
     fn lda(&mut self, mode: &AddressingMode) {
@@ -563,14 +594,39 @@ impl CPU {
                     self.program_counter += 1;
                 }
 
+                /* DEC */
+                0xC6 => {
+                    self.dec(&AddressingMode::ZeroPage);
+                    self.program_counter += 1;
+                }
+
+                /* DEX */
+                0xCA => {
+                    self.dex(&AddressingMode::Implied);
+                }
+
+                /* DEY */
+                0x88 => {
+                    self.dey(&AddressingMode::Implied);
+                }
+
                 /* EOR */
                 0x49 => {
                     self.eor(&AddressingMode::Immediate);
                     self.program_counter += 1;
                 }
 
+                /* INC */
+                0xE6 => {
+                    self.inc(&AddressingMode::ZeroPage);
+                    self.program_counter += 1;
+                }
+
                 /* INX */
-                0xE8 => self.inx(),
+                0xE8 => self.inx(&AddressingMode::Implied),
+
+                /* INY */
+                0xC8 => self.iny(&AddressingMode::Implied),
 
                 /* LDA */
                 0xA9 => {
