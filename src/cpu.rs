@@ -559,6 +559,30 @@ impl CPU {
         self.update_zero_and_negative_flags(self.register_x);
     }
 
+    fn tay(&mut self) {
+        self.register_y = self.register_a;
+        self.update_zero_and_negative_flags(self.register_y);
+    }
+
+    fn tsx(&mut self) {
+        self.register_x = self.stack_pointer;
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn txa(&mut self) {
+        self.register_a = self.register_x;
+        self.update_zero_and_negative_flags(self.register_a);
+    }
+
+    fn txs(&mut self) {
+        self.stack_pointer = self.register_x;
+    }
+
+    fn tya(&mut self) {
+        self.register_a = self.register_y;
+        self.update_zero_and_negative_flags(self.register_a);
+    }
+
     pub fn load_and_run(&mut self, program: Vec<u8>) {
         self.load(program);
         self.reset();
@@ -912,6 +936,21 @@ impl CPU {
 
                 /* TAX */
                 0xAA => self.tax(),
+
+                /* TAY */
+                0xA8 => self.tay(),
+
+                /* TSX */
+                0xBA => self.tsx(),
+
+                /* TXA */
+                0x8A => self.txa(),
+
+                /* TXS */
+                0x9A => self.txs(),
+
+                /* TYA */
+                0x98 => self.tya(),
 
                 _ => todo!(""),
             }
