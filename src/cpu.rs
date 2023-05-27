@@ -1,3 +1,6 @@
+use crate::opcodes;
+use std::collections::HashMap;
+
 pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
@@ -604,355 +607,189 @@ impl CPU {
     }
 
     pub fn run(&mut self) {
-        loop {
-            let opcode = self.mem_read(self.program_counter);
-            self.program_counter += 1;
+        let ref opcodes: HashMap<u8, &'static opcodes::OpCode> = *opcodes::OPCODES_MAP;
 
-            match opcode {
+        loop {
+            let code = self.mem_read(self.program_counter);
+            self.program_counter += 1;
+            let program_counter_state = self.program_counter;
+
+            let opcode = opcodes.get(&code).unwrap();
+
+            match code {
                 /* ADC */
-                0x69 => {
-                    self.adc(&AddressingMode::Immediate);
-                    self.program_counter += 1;
-                }
+                0x69 | 0x65 | 0x75 | 0x6d | 0x7d | 0x79 | 0x61 | 0x71 => self.adc(&opcode.mode),
 
                 /* AND */
-                0x29 => {
-                    self.and(&AddressingMode::Immediate);
-                    self.program_counter += 1;
-                }
+                0x29 | 0x25 | 0x35 | 0x2d | 0x3d | 0x39 | 0x21 | 0x31 => self.and(&opcode.mode),
 
                 /* ASL */
-                0x0A => {
-                    self.asl(&AddressingMode::Accumulator);
-                }
-                0x06 => {
-                    self.asl(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
+                0x0a | 0x06 | 0x16 | 0x0e | 0x1e => self.asl(&opcode.mode),
 
                 /* BCC */
-                0x90 => {
-                    self.bcc(&AddressingMode::Relative);
-                    self.program_counter += 1;
-                }
+                0x90 => self.bcc(&opcode.mode),
 
                 /* BCS */
-                0xB0 => {
-                    self.bcs(&AddressingMode::Relative);
-                    self.program_counter += 1;
-                }
+                0xb0 => self.bcs(&opcode.mode),
 
                 /* BEQ */
-                0xF0 => {
-                    self.beq(&AddressingMode::Relative);
-                    self.program_counter += 1;
-                }
+                0xf0 => self.beq(&opcode.mode),
 
                 /* BIT */
-                0x24 => {
-                    self.bit(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
+                0x24 | 0x2c => self.bit(&opcode.mode),
 
                 /* BMI */
-                0x30 => {
-                    self.bmi(&AddressingMode::Relative);
-                    self.program_counter += 1;
-                }
+                0x30 => self.bmi(&opcode.mode),
 
                 /* BNE */
-                0xD0 => {
-                    self.bne(&AddressingMode::Relative);
-                    self.program_counter += 1;
-                }
+                0xd0 => self.bne(&opcode.mode),
 
                 /* BPL */
-                0x10 => {
-                    self.bpl(&AddressingMode::Relative);
-                    self.program_counter += 1;
-                }
+                0x10 => self.bpl(&opcode.mode),
 
                 /* BRK */
                 0x00 => return,
 
                 /* BVC */
-                0x50 => {
-                    self.bvc(&AddressingMode::Relative);
-                    self.program_counter += 1;
-                }
+                0x50 => self.bvc(&opcode.mode),
 
                 /* BVS */
-                0x70 => {
-                    self.bvs(&AddressingMode::Relative);
-                    self.program_counter += 1;
-                }
+                0x70 => self.bvs(&opcode.mode),
 
                 /* CLC */
-                0x18 => self.clc(&AddressingMode::Implied),
+                0x18 => self.clc(&opcode.mode),
 
                 /* CLD */
-                0xD8 => self.cld(&AddressingMode::Implied),
+                0xd8 => self.cld(&opcode.mode),
 
                 /* CLI */
-                0x58 => self.cli(&AddressingMode::Implied),
+                0x58 => self.cli(&opcode.mode),
 
                 /* CLV */
-                0xB8 => self.clv(&AddressingMode::Implied),
+                0xb8 => self.clv(&opcode.mode),
 
                 /* CMP */
-                0xC9 => {
-                    self.cmp(&AddressingMode::Immediate);
-                    self.program_counter += 1;
-                }
+                0xc9 | 0xc5 | 0xd5 | 0xcd | 0xdd | 0xd9 | 0xc1 | 0xd1 => self.cmp(&opcode.mode),
 
                 /* CPX */
-                0xE0 => {
-                    self.cpx(&AddressingMode::Immediate);
-                    self.program_counter += 1;
-                }
+                0xe0 | 0xe4 | 0xec => self.cpx(&opcode.mode),
 
                 /* CPY */
-                0xC0 => {
-                    self.cpy(&AddressingMode::Immediate);
-                    self.program_counter += 1;
-                }
+                0xc0 | 0xc4 | 0xcc => self.cpy(&opcode.mode),
 
                 /* DEC */
-                0xC6 => {
-                    self.dec(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
+                0xc6 | 0xd6 | 0xce | 0xde => self.dec(&opcode.mode),
 
                 /* DEX */
-                0xCA => {
-                    self.dex(&AddressingMode::Implied);
-                }
+                0xca => self.dex(&opcode.mode),
 
                 /* DEY */
-                0x88 => {
-                    self.dey(&AddressingMode::Implied);
-                }
+                0x88 => self.dey(&opcode.mode),
 
                 /* EOR */
-                0x49 => {
-                    self.eor(&AddressingMode::Immediate);
-                    self.program_counter += 1;
-                }
+                0x49 | 0x45 | 0x55 | 0x4d | 0x5d | 0x59 | 0x41 | 0x51 => self.eor(&opcode.mode),
 
                 /* INC */
-                0xE6 => {
-                    self.inc(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
+                0xe6 | 0xf6 | 0xee | 0xfe => self.inc(&opcode.mode),
 
                 /* INX */
-                0xE8 => self.inx(&AddressingMode::Implied),
+                0xe8 => self.inx(&opcode.mode),
 
                 /* INY */
-                0xC8 => self.iny(&AddressingMode::Implied),
+                0xc8 => self.iny(&opcode.mode),
 
                 /* JMP */
-                0x4C => {
-                    self.jmp(&AddressingMode::Absolute);
-                }
-                0x6C => {
-                    self.jmp(&AddressingMode::Indirect);
-                }
+                0x4c | 0x6c => self.jmp(&opcode.mode),
 
                 /* JSR */
-                0x20 => {
-                    self.jsr(&AddressingMode::Absolute);
-                    self.program_counter += 2;
-                }
+                0x20 => self.jsr(&opcode.mode),
 
                 /* LDA */
-                0xA9 => {
-                    self.lda(&AddressingMode::Immediate);
-                    self.program_counter += 1;
-                }
-                0xA5 => {
-                    self.lda(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
-                0xB5 => {
-                    self.lda(&AddressingMode::ZeroPage_X);
-                    self.program_counter += 1;
-                }
-                0xAD => {
-                    self.lda(&AddressingMode::Absolute);
-                    self.program_counter += 2;
-                }
-                0xBD => {
-                    self.lda(&AddressingMode::Absolute_X);
-                    self.program_counter += 2;
-                }
-                0xB9 => {
-                    self.lda(&AddressingMode::Absolute_Y);
-                    self.program_counter += 2;
-                }
-                0xA1 => {
-                    self.lda(&AddressingMode::Indirect_X);
-                    self.program_counter += 1;
-                }
-                0xB1 => {
-                    self.lda(&AddressingMode::Indirect_Y);
-                    self.program_counter += 1;
-                }
+                0xa9 | 0xa5 | 0xb5 | 0xad | 0xbd | 0xb9 | 0xa1 | 0xb1 => self.lda(&opcode.mode),
 
                 /* LDX */
-                0xA2 => {
-                    self.ldx(&AddressingMode::Immediate);
-                    self.program_counter += 1;
-                }
+                0xa2 | 0xa6 | 0xb6 | 0xae | 0xbe => self.ldx(&opcode.mode),
 
                 /* LDY */
-                0xA0 => {
-                    self.ldy(&AddressingMode::Immediate);
-                    self.program_counter += 1;
-                }
+                0xa0 | 0xa4 | 0xb4 | 0xac | 0xbc => self.ldy(&opcode.mode),
 
                 /* LSR */
-                0x4A => {
-                    self.lsr(&AddressingMode::Accumulator);
-                }
-                0x46 => {
-                    self.lsr(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
+                0x4a | 0x46 | 0x56 | 0x4e | 0x5e => self.lsr(&opcode.mode),
 
                 /* NOP */
-                0xEA => self.nop(&AddressingMode::Implied),
+                0xea => self.nop(&opcode.mode),
 
                 /* ORA */
-                0x09 => {
-                    self.ora(&AddressingMode::Immediate);
-                    self.program_counter += 1;
-                }
+                0x09 | 0x05 | 0x15 | 0x0d | 0x1d | 0x19 | 0x01 | 0x11 => self.ora(&opcode.mode),
 
                 /* PHA */
-                0x48 => {
-                    self.pha(&AddressingMode::Implied);
-                }
+                0x48 => self.pha(&opcode.mode),
 
                 /* PHP */
-                0x08 => {
-                    self.php(&AddressingMode::Implied);
-                }
+                0x08 => self.php(&opcode.mode),
 
                 /* PLA */
-                0x68 => {
-                    self.pla(&AddressingMode::Implied);
-                }
+                0x68 => self.pla(&opcode.mode),
 
                 /* PLP */
-                0x28 => {
-                    self.plp(&AddressingMode::Implied);
-                }
+                0x28 => self.plp(&opcode.mode),
 
                 /* ROL */
-                0x2A => {
-                    self.rol(&AddressingMode::Accumulator);
-                }
-                0x26 => {
-                    self.rol(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
+                0x2a | 0x26 | 0x36 | 0x2e | 0x3e => self.rol(&opcode.mode),
 
                 /* ROR */
-                0x6A => {
-                    self.ror(&AddressingMode::Accumulator);
-                }
-                0x66 => {
-                    self.ror(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
+                0x6a | 0x66 | 0x76 | 0x6e | 0x7e => self.ror(&opcode.mode),
 
                 /* RTI */
-                0x40 => {
-                    self.rti(&AddressingMode::Implied);
-                }
+                0x40 => self.rti(&opcode.mode),
 
                 /* RTS */
-                0x60 => {
-                    self.rts(&AddressingMode::Implied);
-                }
+                0x60 => self.rts(&opcode.mode),
 
                 /* SBC */
-                0xE9 => {
-                    self.sbc(&AddressingMode::Immediate);
-                    self.program_counter += 1;
-                }
+                0xe9 | 0xe5 | 0xf5 | 0xed | 0xfd | 0xf9 | 0xe1 | 0xf1 => self.sbc(&opcode.mode),
 
                 /* SEC */
-                0x38 => self.sec(&AddressingMode::Implied),
+                0x38 => self.sec(&opcode.mode),
 
                 /* SED */
-                0xF8 => self.sed(&AddressingMode::Implied),
+                0xf8 => self.sed(&opcode.mode),
 
                 /* SEI */
-                0x78 => self.sei(&AddressingMode::Implied),
+                0x78 => self.sei(&opcode.mode),
 
                 /* STA */
-                0x85 => {
-                    self.sta(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
-                0x95 => {
-                    self.sta(&AddressingMode::ZeroPage_X);
-                    self.program_counter += 1;
-                }
-                0x8D => {
-                    self.sta(&AddressingMode::Absolute);
-                    self.program_counter += 2;
-                }
-                0x9D => {
-                    self.sta(&AddressingMode::Absolute_X);
-                    self.program_counter += 2;
-                }
-                0x99 => {
-                    self.sta(&AddressingMode::Absolute_Y);
-                    self.program_counter += 2;
-                }
-                0x81 => {
-                    self.sta(&AddressingMode::Indirect_X);
-                    self.program_counter += 1;
-                }
-                0x91 => {
-                    self.sta(&AddressingMode::Indirect_Y);
-                    self.program_counter += 1;
-                }
+                0x85 | 0x95 | 0x8d | 0x9d | 0x99 | 0x81 | 0x91 => self.sta(&opcode.mode),
 
                 /* STX */
-                0x86 => {
-                    self.stx(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
+                0x86 | 0x96 | 0x8e => self.stx(&opcode.mode),
 
                 /* STY */
-                0x84 => {
-                    self.sty(&AddressingMode::ZeroPage);
-                    self.program_counter += 1;
-                }
+                0x84 | 0x94 | 0x8c => self.sty(&opcode.mode),
 
                 /* TAX */
-                0xAA => self.tax(),
+                0xaa => self.tax(),
 
                 /* TAY */
-                0xA8 => self.tay(),
+                0xa8 => self.tay(),
 
                 /* TSX */
-                0xBA => self.tsx(),
+                0xba => self.tsx(),
 
                 /* TXA */
-                0x8A => self.txa(),
+                0x8a => self.txa(),
 
                 /* TXS */
-                0x9A => self.txs(),
+                0x9a => self.txs(),
 
                 /* TYA */
                 0x98 => self.tya(),
 
                 _ => todo!(""),
+            }
+
+            if program_counter_state == self.program_counter {
+                self.program_counter += (opcode.len - 1) as u16;
             }
         }
     }
