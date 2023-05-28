@@ -44,11 +44,17 @@ impl Default for CPU {
     }
 }
 
-impl CPU {
-    pub fn new() -> Self {
-        CPU::default()
-    }
+pub trait Mem {
+    fn mem_read(&self, addr: u16) -> u8;
 
+    fn mem_write(&mut self, addr: u16, data: u8);
+
+    fn mem_read_u16(&self, pos: u16) -> u16;
+
+    fn mem_write_u16(&mut self, pos: u16, data: u16);
+}
+
+impl Mem for CPU {
     fn mem_read(&self, addr: u16) -> u8 {
         self.memory[addr as usize]
     }
@@ -68,6 +74,12 @@ impl CPU {
         let lo = (data & 0xff) as u8;
         self.mem_write(pos, lo);
         self.mem_write(pos + 1, hi);
+    }
+}
+
+impl CPU {
+    pub fn new() -> Self {
+        CPU::default()
     }
 
     fn stack_pop(&mut self) -> u8 {
@@ -593,8 +605,8 @@ impl CPU {
     }
 
     pub fn load(&mut self, program: Vec<u8>) {
-        self.memory[0x8000..(0x8000 + program.len())].copy_from_slice(&program[..]);
-        self.mem_write_u16(0xfffc, 0x8000);
+        self.memory[0x0600..(0x0600 + program.len())].copy_from_slice(&program[..]);
+        self.mem_write_u16(0xfffc, 0x0600);
     }
 
     pub fn reset(&mut self) {
@@ -607,6 +619,13 @@ impl CPU {
     }
 
     pub fn run(&mut self) {
+        self.run_with_callback(|_| {});
+    }
+
+    pub fn run_with_callback<F>(&mut self, mut callback: F)
+    where
+        F: FnMut(&mut CPU),
+    {
         let ref opcodes: HashMap<u8, &'static opcodes::OpCode> = *opcodes::OPCODES_MAP;
 
         loop {
@@ -791,6 +810,8 @@ impl CPU {
             if program_counter_state == self.program_counter {
                 self.program_counter += (opcode.len - 1) as u16;
             }
+
+            callback(self);
         }
     }
 }
