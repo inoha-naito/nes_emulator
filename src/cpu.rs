@@ -1,3 +1,4 @@
+use crate::bus::Bus;
 use crate::opcodes;
 use std::collections::HashMap;
 
@@ -8,7 +9,7 @@ pub struct CPU {
     pub status: u8,
     pub program_counter: u16,
     pub stack_pointer: u8,
-    memory: [u8; 0xffff],
+    pub bus: Bus,
 }
 
 #[derive(Debug, PartialEq)]
@@ -30,38 +31,10 @@ pub enum AddressingMode {
     NoneAddressing,
 }
 
-impl Default for CPU {
-    fn default() -> Self {
-        CPU {
-            register_a: 0,
-            register_x: 0,
-            register_y: 0,
-            status: 0,
-            program_counter: 0,
-            stack_pointer: 0xFD,
-            memory: [0; 0xffff],
-        }
-    }
-}
-
 pub trait Mem {
     fn mem_read(&self, addr: u16) -> u8;
 
     fn mem_write(&mut self, addr: u16, data: u8);
-
-    fn mem_read_u16(&self, pos: u16) -> u16;
-
-    fn mem_write_u16(&mut self, pos: u16, data: u16);
-}
-
-impl Mem for CPU {
-    fn mem_read(&self, addr: u16) -> u8 {
-        self.memory[addr as usize]
-    }
-
-    fn mem_write(&mut self, addr: u16, data: u8) {
-        self.memory[addr as usize] = data;
-    }
 
     fn mem_read_u16(&self, pos: u16) -> u16 {
         let lo = self.mem_read(pos) as u16;
@@ -77,9 +50,35 @@ impl Mem for CPU {
     }
 }
 
+impl Mem for CPU {
+    fn mem_read(&self, addr: u16) -> u8 {
+        self.bus.mem_read(addr)
+    }
+
+    fn mem_write(&mut self, addr: u16, data: u8) {
+        self.bus.mem_write(addr, data)
+    }
+
+    fn mem_read_u16(&self, pos: u16) -> u16 {
+        self.bus.mem_read_u16(pos)
+    }
+
+    fn mem_write_u16(&mut self, pos: u16, data: u16) {
+        self.bus.mem_write_u16(pos, data)
+    }
+}
+
 impl CPU {
-    pub fn new() -> Self {
-        CPU::default()
+    pub fn new(bus: Bus) -> Self {
+        CPU {
+            register_a: 0,
+            register_x: 0,
+            register_y: 0,
+            status: 0,
+            program_counter: 0,
+            stack_pointer: 0xFD,
+            bus,
+        }
     }
 
     fn stack_pop(&mut self) -> u8 {
@@ -605,7 +604,9 @@ impl CPU {
     }
 
     pub fn load(&mut self, program: Vec<u8>) {
-        self.memory[0x0600..(0x0600 + program.len())].copy_from_slice(&program[..]);
+        for i in 0..(program.len() as u16) {
+            self.mem_write(0x0600 + i, program[i as usize]);
+        }
         self.mem_write_u16(0xfffc, 0x0600);
     }
 
